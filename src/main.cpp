@@ -16,6 +16,7 @@ int main()
         );
 
         float Speed = utils::rand(0, 1);
+        float Mass = utils::rand(1, 5);
     };
     
 
@@ -49,7 +50,12 @@ int main()
 
         for (Particle& particle : particles)
         {
-            particle.Pos += glm::normalize(particle.ForceDir) * gl::delta_time_in_seconds() * particle.Speed;
+            glm::vec2 toApply = glm::normalize(particle.ForceDir) * gl::delta_time_in_seconds() * particle.Speed;
+
+            toApply += particle.Mass * 0.9f * gl::delta_time_in_seconds() * glm::vec2(0, -1);
+
+            particle.Pos += toApply;
+            
             utils::draw_disk(particle.Pos, time/100, glm::vec4(1,1,1,1));
 
             if (glm::abs(particle.Pos.x) > glm::abs(gl::window_aspect_ratio())) particle.ForceDir.x *= -1;
