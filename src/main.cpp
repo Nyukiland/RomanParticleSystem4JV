@@ -9,6 +9,13 @@ int main()
             utils::rand(-gl::window_aspect_ratio(), gl::window_aspect_ratio()),
             utils::rand(-1,1)
         );
+
+        glm::vec2 ForceDir = glm::vec2(
+            utils::rand(-1, 1),
+            utils::rand(-1,1)
+        );
+
+        float Speed = utils::rand(0, 1);
     };
     
 
@@ -34,12 +41,12 @@ int main()
         glClearColor(0.f, 0.f, 0.f, 1.f);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        if (time < 1) time += gl::time_in_seconds() / 10;
-        else time -= gl::time_in_seconds() / 10;
+        if (time < 1) time += gl::delta_time_in_seconds() / 2;
+        else time -= gl::delta_time_in_seconds() / 2;
 
-        for (Particle particle : particles)
+        for (Particle& particle : particles)
         {
-            
+            particle.Pos += glm::normalize(particle.ForceDir) * gl::delta_time_in_seconds() * particle.Speed;
             utils::draw_disk(particle.Pos, time/100, glm::vec4(1,1,1,1));
         }
 
