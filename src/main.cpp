@@ -15,9 +15,21 @@ int main()
             utils::rand(-1,1)
         );
 
-        float Speed = utils::rand(0, 1);
+
+        glm::vec4 ColorEnd = glm::vec4(
+            utils::rand(0, 1),
+            utils::rand(0, 1),
+            utils::rand(0, 1),
+            1
+        );
+
+         glm::vec4 ColorStart = glm::vec4(1, 1, 1, 1);
+
+        float Speed = utils::rand(0.1, 1);
         float Mass = utils::rand(1, 5);
         float LifeSize = utils::rand(0.08f, 0.15f);
+        float LifeMore = utils::rand(1, 3);
+        float LifeTotal = LifeMore + LifeSize;
     };
     
 
@@ -52,10 +64,17 @@ int main()
 
             particle.Pos += toApply;
 
-            particle.LifeSize -= gl::delta_time_in_seconds() / (particle.LifeSize * 1000);
-            particle.LifeSize = glm::clamp(particle.LifeSize, 0.0f, 10.0f);
+            if (particle.LifeMore < 0)
+            {
+                particle.LifeSize -= gl::delta_time_in_seconds() / (particle.LifeSize * 1000);
+                particle.LifeSize = glm::clamp(particle.LifeSize, 0.0f, 10.0f);
+            }
+            else particle.LifeMore -= gl::delta_time_in_seconds();
             
-            utils::draw_disk(particle.Pos, particle.LifeSize, glm::vec4(1,1,1,1));
+            float t = (particle.LifeMore + particle.LifeSize) / particle.LifeTotal;
+            glm::vec4 LerpColor = particle.ColorEnd + (particle.ColorStart - particle.ColorEnd) * t;
+
+            utils::draw_disk(particle.Pos, particle.LifeSize, LerpColor);
 
             if (glm::abs(particle.Pos.x) > glm::abs(gl::window_aspect_ratio())) particle.ForceDir.x *= -1;
             if (glm::abs(particle.Pos.y) > 1) particle.ForceDir.y *= -1;
