@@ -42,8 +42,8 @@ int main()
         glClearColor(0.f, 0.f, 0.f, 1.f);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        if (time > 1) inverse = true;
-        else if (time < 0.1) inverse = false;
+        if (time > 1.3) inverse = true;
+        else if (time < 0.3) inverse = false;
 
         if (inverse) time -= gl::delta_time_in_seconds() / 2;
         else time += gl::delta_time_in_seconds() / 2;
@@ -52,7 +52,9 @@ int main()
         {
             glm::vec2 toApply = glm::normalize(particle.ForceDir) * gl::delta_time_in_seconds() * particle.Speed;
 
-            toApply += particle.Mass * 0.9f * gl::delta_time_in_seconds() * glm::vec2(0, -1);
+            //toApply += particle.Mass * 0.9f * gl::delta_time_in_seconds() * glm::vec2(0, -1);
+
+            toApply += (gl::mouse_position() - particle.Pos) * gl::delta_time_in_seconds() * (particle.Mass /10);
 
             particle.Pos += toApply;
             
