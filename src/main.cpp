@@ -24,7 +24,7 @@ int main()
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 
-
+    bool inverse = false;
     float time = 0;
 
     int particleCount = 100;
@@ -41,13 +41,19 @@ int main()
         glClearColor(0.f, 0.f, 0.f, 1.f);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        if (time < 1) time += gl::delta_time_in_seconds() / 2;
-        else time -= gl::delta_time_in_seconds() / 2;
+        if (time > 1) inverse = true;
+        else if (time < 0.1) inverse = false;
+
+        if (inverse) time -= gl::delta_time_in_seconds() / 2;
+        else time += gl::delta_time_in_seconds() / 2;
 
         for (Particle& particle : particles)
         {
             particle.Pos += glm::normalize(particle.ForceDir) * gl::delta_time_in_seconds() * particle.Speed;
             utils::draw_disk(particle.Pos, time/100, glm::vec4(1,1,1,1));
+
+            if (glm::abs(particle.Pos.x) > glm::abs(gl::window_aspect_ratio())) particle.ForceDir.x *= -1;
+            if (glm::abs(particle.Pos.y) > 1) particle.ForceDir.y *= -1;
         }
 
         // TODO update particles
