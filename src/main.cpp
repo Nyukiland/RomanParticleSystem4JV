@@ -98,18 +98,25 @@ int main()
         particles.emplace_back();
     }
 
+    bool pressed = false;
+
     gl::set_events_callbacks({
         {
+            .on_mouse_moved = [&](gl::MouseMoveEvent const& e){
+                if (pressed)
+                {
+                    glm::vec2 point = gl::mouse_position();
+                    Objects[Objects.size() - 1].EndPoint = point;
+                }
+            },
             .on_mouse_pressed = [&](gl::MousePressedEvent const& e){
                 Objects.emplace_back(gl::mouse_position());
+                pressed = true;
             },
-            // .on_mouse_moved = [&](gl::MouseMoveEvent const& e){
-            //     glm::vec2 point = gl::mouse_position();
-            //     Objects[Objects.size() - 1].EndPoint = point;
-            // },
             .on_mouse_released = [&](gl::MouseReleasedEvent const& e){
                 glm::vec2 point = gl::mouse_position();
                 Objects[Objects.size() - 1].EndPoint = point;
+                pressed = false;
             }
         }
     });
@@ -133,7 +140,7 @@ int main()
 
             //toApply += (gl::mouse_position() - particle.Pos) * gl::delta_time_in_seconds() * (particle.Mass /10);
 
-            Vector2D vec(particle.Pos, glm::normalize(toApply), glm::length(toApply));
+            Vector2D vec(particle.Pos, glm::normalize(toApply), glm::length(toApply) + particle.LifeSize);
 
             for (ObjectData& obj : Objects)
             {
