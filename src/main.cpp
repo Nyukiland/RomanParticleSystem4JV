@@ -1,6 +1,42 @@
 #include "opengl-framework/opengl-framework.hpp"
 #include "utils.hpp"
 
+struct Vector2D
+{
+    Vector2D(glm::vec2 O, glm::vec2 D, float M)
+    {
+        Origin = O;
+        Dir = D;
+        Magnitude = M;
+    };
+
+    glm::vec2 Origin;
+    glm::vec2 Dir;
+    float Magnitude;
+};
+
+glm::vec2 GetIntersectionPoint(const Vector2D& Vec1, const Vector2D& Vec2)
+{
+    glm::vec2 OriginVector = Vec2.Origin - Vec1.Origin;
+
+    glm::mat2 M(Vec1.Dir, -Vec2.Dir);
+
+    float det = glm::determinant(M);
+    if (glm::abs(det) < 1e-6f) 
+    {
+        return glm::vec2(-123.0f, -123.0f); //return value if no intersection
+    }
+
+    glm::vec2 t = glm::inverse(M) * OriginVector;
+
+    if (t.x < 0.0f || t.x > Vec1.Magnitude || t.y < 0.0f || t.y > Vec2.Magnitude) 
+    {
+        return glm::vec2(-123.0f, -123.0f); //return value if no intersection
+    }
+
+    return Vec1.Origin + t.x * Vec1.Dir;
+}
+
 int main()
 {
     struct Particle
@@ -54,13 +90,25 @@ int main()
         glClearColor(0.f, 0.f, 0.f, 1.f);
         glClear(GL_COLOR_BUFFER_BIT);
 
+        utils::draw_line(glm::vec2(0,-1), gl::mouse_position(), 0.02, glm::vec4(1,1,1,1));
+        utils::draw_line(glm::vec2(0.9,0), glm::vec2(-0.9,0), 0.02, glm::vec4(1,1,1,1));
+
+        Vector2D VectorBase(glm::vec2(-0.9,0), glm::vec2(1,0), 1.8);
+        
+        glm::vec2 mouseDir = gl::mouse_position() - glm::vec2(0,-1);
+        Vector2D VectorMouse(glm::vec2(0,-1), glm::normalize(mouseDir), glm::length(mouseDir));
+
+        glm::vec2 intersect = GetIntersectionPoint(VectorBase, VectorMouse);
+
+        utils::draw_disk(intersect, 0.05, glm::vec4(0,1,0,1));
+
         for (Particle& particle : particles)
         {
             glm::vec2 toApply = glm::normalize(particle.ForceDir) * gl::delta_time_in_seconds() * particle.Speed;
 
             //toApply += particle.Mass * 0.9f * gl::delta_time_in_seconds() * glm::vec2(0, -1);
 
-            toApply += (gl::mouse_position() - particle.Pos) * gl::delta_time_in_seconds() * (particle.Mass /10);
+            //toApply += (gl::mouse_position() - particle.Pos) * gl::delta_time_in_seconds() * (particle.Mass /10);
 
             particle.Pos += toApply;
 
