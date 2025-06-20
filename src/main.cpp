@@ -133,7 +133,7 @@ int main()
 
             //toApply += (gl::mouse_position() - particle.Pos) * gl::delta_time_in_seconds() * (particle.Mass /10);
 
-            Vector2D vec(particle.Pos, particle.ForceDir, particle.Speed);
+            Vector2D vec(particle.Pos, glm::normalize(toApply), glm::length(toApply));
 
             for (ObjectData& obj : Objects)
             {
@@ -142,6 +142,7 @@ int main()
                 if (GetIntersectionPoint(vec, vecL) != glm::vec2(-123.0f, -123.0f)) 
                 {
                     toApply = glm::reflect(toApply, glm::vec2(dir.y, dir.x));
+                    particle.ForceDir = glm::reflect(particle.ForceDir, glm::vec2(dir.y, dir.x));
                 }
             }
 
