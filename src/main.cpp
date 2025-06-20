@@ -15,6 +15,17 @@ struct Vector2D
     float Magnitude;
 };
 
+struct ObjectData
+{
+    ObjectData(glm::vec2 O)
+    {
+        Origin = O;
+    };
+
+    glm::vec2 Origin;
+    glm::vec2 EndPoint;
+};
+
 glm::vec2 GetIntersectionPoint(const Vector2D& Vec1, const Vector2D& Vec2)
 {
     glm::vec2 OriginVector = Vec2.Origin - Vec1.Origin;
@@ -76,7 +87,9 @@ int main()
 
     bool inverse = false;
 
-    int particleCount = 100;
+    int particleCount = 10;
+
+    std::vector<ObjectData> Objects;
 
     std::vector<Particle> particles;
     particles.reserve(particleCount);
@@ -85,22 +98,32 @@ int main()
         particles.emplace_back();
     }
 
+    gl::set_events_callbacks({
+        {
+            .on_mouse_pressed = [&](gl::MousePressedEvent const& e){
+                Objects.emplace_back(gl::mouse_position());
+            },
+            // .on_mouse_moved = [&](gl::MouseMoveEvent const& e){
+            //     glm::vec2 point = gl::mouse_position();
+            //     Objects[Objects.size() - 1].EndPoint = point;
+            // },
+            .on_mouse_released = [&](gl::MouseReleasedEvent const& e){
+                glm::vec2 point = gl::mouse_position();
+                Objects[Objects.size() - 1].EndPoint = point;
+            }
+        }
+    });
+
+
     while (gl::window_is_open())
     {
         glClearColor(0.f, 0.f, 0.f, 1.f);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        utils::draw_line(glm::vec2(0,-1), gl::mouse_position(), 0.02, glm::vec4(1,1,1,1));
-        utils::draw_line(glm::vec2(0.9,0), glm::vec2(-0.9,0), 0.02, glm::vec4(1,1,1,1));
-
-        Vector2D VectorBase(glm::vec2(-0.9,0), glm::vec2(1,0), 1.8);
-        
-        glm::vec2 mouseDir = gl::mouse_position() - glm::vec2(0,-1);
-        Vector2D VectorMouse(glm::vec2(0,-1), glm::normalize(mouseDir), glm::length(mouseDir));
-
-        glm::vec2 intersect = GetIntersectionPoint(VectorBase, VectorMouse);
-
-        utils::draw_disk(intersect, 0.05, glm::vec4(0,1,0,1));
+        for (ObjectData& obj : Objects)
+        {
+            utils::draw_line(obj.Origin, obj.EndPoint, 0.02, glm::vec4(0.5, 0.5, 0.5, 1));
+        }
 
         for (Particle& particle : particles)
         {
@@ -110,14 +133,26 @@ int main()
 
             //toApply += (gl::mouse_position() - particle.Pos) * gl::delta_time_in_seconds() * (particle.Mass /10);
 
+            Vector2D vec(particle.Pos, particle.ForceDir, particle.Speed);
+
+            for (ObjectData& obj : Objects)
+            {
+                glm::vec2 dir(obj.EndPoint - obj.Origin);
+                Vector2D vecL(obj.Origin, glm::normalize(dir), glm::length(dir));
+                if (GetIntersectionPoint(vec, vecL) != glm::vec2(-123.0f, -123.0f)) 
+                {
+                    toApply = glm::reflect(toApply, glm::vec2(dir.y, dir.x));
+                }
+            }
+
             particle.Pos += toApply;
 
-            if (particle.LifeMore < 0)
-            {
-                particle.LifeSize -= gl::delta_time_in_seconds() / (particle.LifeSize * 1000);
-                particle.LifeSize = glm::clamp(particle.LifeSize, 0.0f, 10.0f);
-            }
-            else particle.LifeMore -= gl::delta_time_in_seconds();
+            // if (particle.LifeMore < 0)
+            // {
+            //     particle.LifeSize -= gl::delta_time_in_seconds() / (particle.LifeSize * 1000);
+            //     particle.LifeSize = glm::clamp(particle.LifeSize, 0.0f, 10.0f);
+            // }
+            // else particle.LifeMore -= gl::delta_time_in_seconds();
             
             float t = (particle.LifeMore + particle.LifeSize) / particle.LifeTotal;
             glm::vec4 LerpColor = particle.ColorEnd + (particle.ColorStart - particle.ColorEnd) * t;
