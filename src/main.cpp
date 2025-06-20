@@ -15,15 +15,26 @@ struct Vector2D
     float Magnitude;
 };
 
-struct ObjectData
+struct LineStruct
 {
-    ObjectData(glm::vec2 O)
+    LineStruct(glm::vec2 O)
     {
         Origin = O;
     };
 
     glm::vec2 Origin;
     glm::vec2 EndPoint;
+};
+
+struct CircleStruct
+{
+    CircleStruct(glm::vec2 O)
+    {
+        Origin = O;
+    }
+
+    glm::vec2 Origin;
+    float Size;
 };
 
 glm::vec2 GetIntersectionPoint(const Vector2D& Vec1, const Vector2D& Vec2)
@@ -88,9 +99,6 @@ int main()
     bool inverse = false;
 
     int particleCount = 10;
-
-    std::vector<ObjectData> Objects;
-
     std::vector<Particle> particles;
     particles.reserve(particleCount);
     for (int i = 0; i < particleCount; ++i)
@@ -98,25 +106,48 @@ int main()
         particles.emplace_back();
     }
 
-    bool pressed = false;
+    std::vector<LineStruct> Lines;
+    std::vector<CircleStruct> Circles;
+    
+    int pressed = -1;
 
     gl::set_events_callbacks({
         {
             .on_mouse_moved = [&](gl::MouseMoveEvent const& e){
-                if (pressed)
+                if (pressed == 0)
                 {
                     glm::vec2 point = gl::mouse_position();
-                    Objects[Objects.size() - 1].EndPoint = point;
+                    Lines[Lines.size() - 1].EndPoint = point;
+                }
+                else if (pressed == 1)
+                {
+                    float dist = glm::length(gl::mouse_position() - Circles[Circles.size() - 1].Origin);
+                    Circles[Circles.size() - 1].Size = dist;
                 }
             },
             .on_mouse_pressed = [&](gl::MousePressedEvent const& e){
-                Objects.emplace_back(gl::mouse_position());
-                pressed = true;
+                if (e.button == 0) 
+                {
+                    Lines.emplace_back(gl::mouse_position());
+                }
+                else if (e.button == 1)
+                {
+                    Circles.emplace_back(gl::mouse_position());
+                }
+                pressed = e.button;
             },
             .on_mouse_released = [&](gl::MouseReleasedEvent const& e){
-                glm::vec2 point = gl::mouse_position();
-                Objects[Objects.size() - 1].EndPoint = point;
-                pressed = false;
+                if (pressed == 0)
+                {
+                    glm::vec2 point = gl::mouse_position();
+                    Lines[Lines.size() - 1].EndPoint = point;
+                }
+                else if (pressed == 1)
+                {
+                    float dist = glm::length(gl::mouse_position() - Circles[Circles.size() - 1].Origin);
+                    Circles[Circles.size() - 1].Size = dist;
+                }
+                pressed = -1;
             }
         }
     });
@@ -127,9 +158,14 @@ int main()
         glClearColor(0.f, 0.f, 0.f, 1.f);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        for (ObjectData& obj : Objects)
+        for (LineStruct& obj : Lines)
         {
             utils::draw_line(obj.Origin, obj.EndPoint, 0.02, glm::vec4(0.5, 0.5, 0.5, 1));
+        }
+        
+        for (CircleStruct& circle : Circles)
+        {
+            utils::draw_disk(circle.Origin, circle.Size, glm::vec4(0.5, 0.5, 0.5, 1));
         }
 
         for (Particle& particle : particles)
@@ -142,36 +178,40 @@ int main()
 
             Vector2D vec(particle.Pos, glm::normalize(toApply), glm::length(toApply) + particle.LifeSize);
 
-            for (ObjectData& obj : Objects)
+            for (LineStruct& obj : Lines)
             {
                 glm::vec2 dir(obj.EndPoint - obj.Origin);
                 Vector2D vecL(obj.Origin, glm::normalize(dir), glm::length(dir));
                 if (GetIntersectionPoint(vec, vecL) != glm::vec2(-123.0f, -123.0f)) 
                 {
-                    toApply = glm::reflect(toApply, glm::vec2(dir.y, dir.x));
+                    toApply = glm::reflect(toApply, glm::vec2(-dir.y, dir.x));
                     particle.ForceDir = glm::reflect(particle.ForceDir, glm::vec2(dir.y, dir.x));
                 }
             }
 
+            for (CircleStruct& circle : Circles)
+            {
+                glm::vec2 toCenter = particle.Pos - circle.Origin;
+                float dist = glm::length(toCenter);
+
+                if (dist <= circle.Size + particle.LifeSize)
+                {
+                    glm::vec2 normal = glm::normalize(toCenter);
+                    toApply = glm::reflect(toApply, normal);
+                    particle.ForceDir = glm::reflect(particle.ForceDir, normal);
+
+                    particle.Pos = circle.Origin + normal * (circle.Size + particle.LifeSize + 0.001f);
+                }
+            }
+
+
             particle.Pos += toApply;
 
-            // if (particle.LifeMore < 0)
-            // {
-            //     particle.LifeSize -= gl::delta_time_in_seconds() / (particle.LifeSize * 1000);
-            //     particle.LifeSize = glm::clamp(particle.LifeSize, 0.0f, 10.0f);
-            // }
-            // else particle.LifeMore -= gl::delta_time_in_seconds();
-            
-            float t = (particle.LifeMore + particle.LifeSize) / particle.LifeTotal;
-            glm::vec4 LerpColor = particle.ColorEnd + (particle.ColorStart - particle.ColorEnd) * t;
-
-            utils::draw_disk(particle.Pos, particle.LifeSize, LerpColor);
+            utils::draw_disk(particle.Pos, particle.LifeSize, particle.ColorEnd);
 
             if (glm::abs(particle.Pos.x) > glm::abs(gl::window_aspect_ratio())) particle.ForceDir.x *= -1;
             if (glm::abs(particle.Pos.y) > 1) particle.ForceDir.y *= -1;
         }
-
-        std::erase_if(particles, [](Particle const& x) { return x.LifeSize <= 0;});
 
         // TODO update particles
         // TODO render particles
