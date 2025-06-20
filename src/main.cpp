@@ -58,7 +58,7 @@ glm::vec2 GetIntersectionPoint(const Vector2D& Vec1, const Vector2D& Vec2)
     return Vec1.Origin + t.x * Vec1.Dir;
 }
 
-bool LineIntersectsCircle(glm::vec2 A, glm::vec2 B, glm::vec2 center, float radius)
+bool LineIntersectsCircle(glm::vec2 A, glm::vec2 B, glm::vec2 center, float radius, glm::vec2& closest)
 {
     glm::vec2 AB = B - A;
     glm::vec2 AC = center - A;
@@ -66,7 +66,7 @@ bool LineIntersectsCircle(glm::vec2 A, glm::vec2 B, glm::vec2 center, float radi
     float t = glm::dot(AC, AB) / glm::dot(AB, AB);
     t = glm::clamp(t, 0.0f, 1.0f);
 
-    glm::vec2 closest = A + t * AB;
+    closest = A + t * AB;
 
     float distance = glm::length(closest - center);
     return distance <= radius;
@@ -94,18 +94,17 @@ int main()
                     int lastIndex = Lines.back().Points.size() - 1;
                     glm::vec2 lastPoint = Lines.back().Points[lastIndex - 1]; // second to last
 
-                    bool collided = false;
-
                     for (const auto& circle : Circles)
                     {
-                        if (LineIntersectsCircle(lastPoint, point, circle.Origin, circle.Size))
+                        glm::vec2 closest(0,0);
+
+                        if (LineIntersectsCircle(lastPoint, point, circle.Origin, circle.Size, closest))
                         {
-                            glm::vec2 dir = glm::normalize(point - circle.Origin);
-                            glm::vec2 tangentPoint = circle.Origin + dir * (circle.Size + 0.02f); 
+                            glm::vec2 dir = glm::normalize(closest - circle.Origin);
+                            glm::vec2 pointToAdd = circle.Origin + dir * (circle.Size + 0.02f);
 
-                            Lines.back().Points.insert(Lines.back().Points.end() - 1, tangentPoint);
+                            Lines.back().Points.insert(Lines.back().Points.end() - 1, pointToAdd);
 
-                            collided = true;
                             break;
                         }
                     }
