@@ -19,11 +19,10 @@ struct LineStruct
 {
     LineStruct(glm::vec2 O)
     {
-        Origin = O;
+        Points.emplace_back(O);
     };
 
-    glm::vec2 Origin;
-    glm::vec2 EndPoint;
+    std::vector<glm::vec2> Points;
 };
 
 struct CircleStruct
@@ -59,52 +58,27 @@ glm::vec2 GetIntersectionPoint(const Vector2D& Vec1, const Vector2D& Vec2)
     return Vec1.Origin + t.x * Vec1.Dir;
 }
 
-int main()
+bool LineIntersectsCircle(glm::vec2 A, glm::vec2 B, glm::vec2 center, float radius)
 {
-    struct Particle
-    {
-        glm::vec2 Pos = glm::vec2(
-            utils::rand(-gl::window_aspect_ratio(), gl::window_aspect_ratio()),
-            utils::rand(-1,1)
-        );
+    glm::vec2 AB = B - A;
+    glm::vec2 AC = center - A;
 
-        glm::vec2 ForceDir = glm::vec2(
-            utils::rand(-1, 1),
-            utils::rand(-1,1)
-        );
+    float t = glm::dot(AC, AB) / glm::dot(AB, AB);
+    t = glm::clamp(t, 0.0f, 1.0f);
+
+    glm::vec2 closest = A + t * AB;
+
+    float distance = glm::length(closest - center);
+    return distance <= radius;
+}
 
 
-        glm::vec4 ColorEnd = glm::vec4(
-            utils::rand(0, 1),
-            utils::rand(0, 1),
-            utils::rand(0, 1),
-            1
-        );
-
-         glm::vec4 ColorStart = glm::vec4(1, 1, 1, 1);
-
-        float Speed = utils::rand(0.1, 1);
-        float Mass = utils::rand(1, 5);
-        float LifeSize = utils::rand(0.08f, 0.15f);
-        float LifeMore = utils::rand(1, 3);
-        float LifeTotal = LifeMore + LifeSize;
-    };
-    
-
-    gl::init("Particules!");
+int main()
+{   
+    gl::init("Rope!");
     gl::maximize_window();
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-
-    bool inverse = false;
-
-    int particleCount = 10;
-    std::vector<Particle> particles;
-    particles.reserve(particleCount);
-    for (int i = 0; i < particleCount; ++i)
-    {
-        particles.emplace_back();
-    }
 
     std::vector<LineStruct> Lines;
     std::vector<CircleStruct> Circles;
@@ -117,7 +91,27 @@ int main()
                 if (pressed == 0)
                 {
                     glm::vec2 point = gl::mouse_position();
-                    Lines[Lines.size() - 1].EndPoint = point;
+                    int lastIndex = Lines.back().Points.size() - 1;
+                    glm::vec2 lastPoint = Lines.back().Points[lastIndex - 1]; // second to last
+
+                    bool collided = false;
+
+                    for (const auto& circle : Circles)
+                    {
+                        if (LineIntersectsCircle(lastPoint, point, circle.Origin, circle.Size))
+                        {
+                            glm::vec2 dir = glm::normalize(point - circle.Origin);
+                            glm::vec2 tangentPoint = circle.Origin + dir * (circle.Size + 0.02f); 
+
+                            Lines.back().Points.insert(Lines.back().Points.end() - 1, tangentPoint);
+
+                            collided = true;
+                            break;
+                        }
+                    }
+
+                    // Always update the last point to current mouse
+                    Lines.back().Points.back() = point;
                 }
                 else if (pressed == 1)
                 {
@@ -129,6 +123,7 @@ int main()
                 if (e.button == 0) 
                 {
                     Lines.emplace_back(gl::mouse_position());
+                    Lines[Lines.size() - 1].Points.emplace_back(gl::mouse_position());
                 }
                 else if (e.button == 1)
                 {
@@ -140,7 +135,8 @@ int main()
                 if (pressed == 0)
                 {
                     glm::vec2 point = gl::mouse_position();
-                    Lines[Lines.size() - 1].EndPoint = point;
+                    int LastIndex = Lines[Lines.size() - 1].Points.size() -1;
+                    Lines[Lines.size() - 1].Points[LastIndex] = point;
                 }
                 else if (pressed == 1)
                 {
@@ -158,62 +154,17 @@ int main()
         glClearColor(0.f, 0.f, 0.f, 1.f);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        for (LineStruct& obj : Lines)
+        for (LineStruct& line : Lines)
         {
-            utils::draw_line(obj.Origin, obj.EndPoint, 0.02, glm::vec4(0.5, 0.5, 0.5, 1));
+            for(int i = 0; i < line.Points.size() - 1; i++)
+            {
+                utils::draw_line(line.Points[i], line.Points[i+1], 0.02, glm::vec4(0, 0, 1, 1));
+            }
         }
         
         for (CircleStruct& circle : Circles)
         {
             utils::draw_disk(circle.Origin, circle.Size, glm::vec4(0.5, 0.5, 0.5, 1));
         }
-
-        for (Particle& particle : particles)
-        {
-            glm::vec2 toApply = glm::normalize(particle.ForceDir) * gl::delta_time_in_seconds() * particle.Speed;
-
-            //toApply += particle.Mass * 0.9f * gl::delta_time_in_seconds() * glm::vec2(0, -1);
-
-            //toApply += (gl::mouse_position() - particle.Pos) * gl::delta_time_in_seconds() * (particle.Mass /10);
-
-            Vector2D vec(particle.Pos, glm::normalize(toApply), glm::length(toApply) + particle.LifeSize);
-
-            for (LineStruct& obj : Lines)
-            {
-                glm::vec2 dir(obj.EndPoint - obj.Origin);
-                Vector2D vecL(obj.Origin, glm::normalize(dir), glm::length(dir));
-                if (GetIntersectionPoint(vec, vecL) != glm::vec2(-123.0f, -123.0f)) 
-                {
-                    toApply = glm::reflect(toApply, glm::vec2(-dir.y, dir.x));
-                    particle.ForceDir = glm::reflect(particle.ForceDir, glm::vec2(dir.y, dir.x));
-                }
-            }
-
-            for (CircleStruct& circle : Circles)
-            {
-                glm::vec2 toCenter = particle.Pos - circle.Origin;
-                float dist = glm::length(toCenter);
-
-                if (dist <= circle.Size + particle.LifeSize)
-                {
-                    glm::vec2 normal = glm::normalize(toCenter);
-                    toApply = glm::reflect(toApply, normal);
-                    particle.ForceDir = glm::reflect(particle.ForceDir, normal);
-
-                    particle.Pos = circle.Origin + normal * (circle.Size + particle.LifeSize + 0.001f);
-                }
-            }
-
-
-            particle.Pos += toApply;
-
-            utils::draw_disk(particle.Pos, particle.LifeSize, particle.ColorEnd);
-
-            if (glm::abs(particle.Pos.x) > glm::abs(gl::window_aspect_ratio())) particle.ForceDir.x *= -1;
-            if (glm::abs(particle.Pos.y) > 1) particle.ForceDir.y *= -1;
-        }
-
-        // TODO update particles
-        // TODO render particles
     }
 }
