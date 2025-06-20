@@ -92,13 +92,18 @@ int main()
                 {
                     glm::vec2 point = gl::mouse_position();
                     int lastIndex = Lines.back().Points.size() - 1;
-                    glm::vec2 lastPoint = Lines.back().Points[lastIndex - 1]; // second to last
+                    glm::vec2 lastPoint = Lines.back().Points[lastIndex - 1]; 
 
                     for (const auto& circle : Circles)
                     {
                         glm::vec2 closest(0,0);
 
-                        if (LineIntersectsCircle(lastPoint, point, circle.Origin, circle.Size, closest))
+                        if (Lines.back().Points.size() > 2 && !LineIntersectsCircle(Lines.back().Points[lastIndex - 2], point, circle.Origin, circle.Size, closest))
+                        {
+                            Lines.back().Points.erase(Lines.back().Points.begin() + lastIndex - 1);
+                            break; 
+                        }
+                        else if (LineIntersectsCircle(lastPoint, point, circle.Origin, circle.Size, closest))
                         {
                             glm::vec2 dir = glm::normalize(closest - circle.Origin);
                             glm::vec2 pointToAdd = circle.Origin + dir * (circle.Size + 0.02f);
