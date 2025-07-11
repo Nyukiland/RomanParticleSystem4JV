@@ -30,7 +30,9 @@ int main()
         {
             particles.emplace_back();
             
-            particles[index].Pos = glm::vec2(-gl::window_aspect_ratio() + spacing*x, -1 + spacing*y);
+            particles[index].Pos = glm::vec2(-gl::window_aspect_ratio() + spacing * x, -1 + spacing * y);
+            particles[index].Pos += glm::vec2(utils::rand(0, spacing/2), utils::rand(0, spacing/2)); 
+
             index++;
         }
     }
