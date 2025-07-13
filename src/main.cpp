@@ -4,8 +4,48 @@
 
 struct Particle
 {
-     glm::vec2 Pos = glm::vec2(0,0);
+    float xLeftBound = gl::window_aspect_ratio() - 1;
+    float xRightBound = gl::window_aspect_ratio() - 0.5;
+
+    float x = utils::rand(xLeftBound, xRightBound - 0.1);
+    float x0to1 = (x - xLeftBound)/(xRightBound - xLeftBound);
+    glm::vec2 dir = glm::vec2(0.5, 0.5);
+    float ratioDown = 0.5;
+
+    glm::vec2 Pos = glm::vec2(x, 0) + (glm::normalize(dir) * utils::rand(0, x0to1 * ratioDown));
 };
+
+struct ParticleEquilateral 
+{
+    float xLeftBound = -gl::window_aspect_ratio() + 0.1;
+    float xRightBound = -gl::window_aspect_ratio() + 0.9;
+
+    float sideLength = xRightBound - xLeftBound;
+    float height = sideLength * glm::sqrt(3) / 2;
+
+    float x = utils::rand(xLeftBound, xRightBound);
+    float x0to1 = 1 - ((x - xLeftBound) / sideLength);
+
+    glm::vec2 dir = glm::vec2((sideLength/2), height);
+
+    glm::vec2 Pos = glm::vec2(x, 0) + dir * utils::rand(0, x0to1);
+};
+
+struct ParticleRectangle
+{
+    float xLeftBound = -0.3f;
+    float xRightBound = 0.3f;
+
+    float x = utils::rand(xLeftBound, xRightBound);
+    float sideLength = xRightBound - xLeftBound;
+
+    float x0to1 = 1.f - ((x - xLeftBound) / sideLength); 
+    float y = utils::rand(0.f, x0to1 * sideLength);
+
+    glm::vec2 Pos = glm::vec2(x, y);
+};
+
+
 
 int main()
 {
@@ -14,29 +54,27 @@ int main()
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 
-    float spacing = 0.1;
-
-    float xCount = (gl::window_aspect_ratio()*2)/spacing;
-    float yCount = 2/spacing;
-
-    int index = 0;
-
-    int particleCount = xCount * yCount;
+    int particleCount = 1000;
     std::vector<Particle> particles;
     particles.reserve(particleCount);
-    for (int x = 0; x < xCount; ++x)
+    for (int x = 0; x < particleCount; ++x)
     {
-        for (int y = 0; y < yCount; ++y)
-        {
-            particles.emplace_back();
-            
-            particles[index].Pos = glm::vec2(-gl::window_aspect_ratio() + spacing * x, -1 + spacing * y);
-            particles[index].Pos += glm::vec2(utils::rand(0, spacing/2), utils::rand(0, spacing/2)); 
-
-            index++;
-        }
+        particles.emplace_back();       
     }
 
+    std::vector<ParticleEquilateral> particlesEqui;
+    particlesEqui.reserve(particleCount);
+    for (int x = 0; x < particleCount; ++x)
+    {
+        particlesEqui.emplace_back();       
+    }
+
+    std::vector<ParticleRectangle> particlesRec;
+    particlesRec.reserve(particleCount);
+    for (int x = 0; x < particleCount; ++x)
+    {
+        particlesRec.emplace_back();       
+    }
 
     while (gl::window_is_open())
     {
@@ -45,7 +83,17 @@ int main()
 
         for (Particle& particle : particles)
         {
-            utils::draw_disk(particle.Pos, 0.01, glm::vec4(1,1,1,1));
+            utils::draw_disk(particle.Pos, 0.01, glm::vec4(0,1,1,1));
+        }
+
+        for (ParticleEquilateral& particle : particlesEqui)
+        {
+            utils::draw_disk(particle.Pos, 0.01, glm::vec4(1,0,1,1));
+        }
+
+        for (ParticleRectangle& particle : particlesRec)
+        {
+            utils::draw_disk(particle.Pos, 0.01, glm::vec4(1,1,0,1));
         }
     }
 }
