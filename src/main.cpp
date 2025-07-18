@@ -65,9 +65,9 @@ glm::vec2 find_normal(std::function<glm::vec2(float)> const& parametric, float t
     return glm::normalize(glm::vec2(-tangent.y, tangent.x));
 }
 
-glm::vec2 find_closest(std::function<glm::vec2(float)> const& parametric, glm::vec2 targetPos, int samples = 500)
+glm::vec2 find_closest(std::function<glm::vec2(float)> const& parametric, glm::vec2 targetPos, float& outT, float& outDist, int samples = 500)
 {
-    float best_dist2 = 1000000; 
+    outDist = 1000000; 
     glm::vec2 bestPoint = glm::vec2(1000, 1000);
 
     for (int i = 0; i <= samples; ++i)
@@ -76,10 +76,12 @@ glm::vec2 find_closest(std::function<glm::vec2(float)> const& parametric, glm::v
         glm::vec2 point = parametric(t);
         float dist2 = glm::length(point - targetPos); 
 
-        if (dist2 < best_dist2)
+        if (dist2 < outDist)
         {
-            best_dist2 = dist2;
+            outDist = dist2;
             bestPoint = point;
+            outT = t;
+
         }
     }
 
@@ -93,41 +95,54 @@ int main()
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 
-    auto bezierCurve = [](float t) {
-        return bezier3({-0.7f, 0}, {0, 0}, {0.5f, 0.5f}, {0.8f, -0.3f}, t);
+    auto shape = [](float t) {
+        float theta = t * 2.0f * std::numbers::pi;
+        float r = 1.0f - sin(theta);
+        float x = r * cos(theta);
+        float y = r * sin(theta);
+        return glm::vec2(x, y) * 0.5f;
     };
 
-
-    int particlesCount = 20;
+    int particlesCount = 100;
     std::vector<Particle> particles;
     
     for (int i = 0; i < particlesCount; ++i)
     {
         float placement = (float)i/(float)particlesCount;
         
-        glm::vec2 pos = bezierCurve(placement);
-        glm::vec2 normal = find_normal(bezierCurve, placement);
+        glm::vec2 pos = lerp(glm::vec2(-gl::window_aspect_ratio(), 1), glm::vec2(gl::window_aspect_ratio(), 1), placement);
         
-        particles.push_back({ pos, normal });
+        particles.push_back({ pos, glm::vec2(0,-1) });
     }
     
-    float speed = 0.2f;
+    float gravity = 0.002f;
+    float forceFieldMultiplier = 3.0f;
 
     while (gl::window_is_open())
     {
         glClearColor(0.f, 0.f, 0.f, 1.f);
         glClear(GL_COLOR_BUFFER_BIT);
 
-         draw_parametric(bezierCurve, glm::vec4(1,1,1,1));
+         draw_parametric(shape, glm::vec4(1,1,1,1));
 
         for (Particle& particle : particles)
         {
-            particle.Pos += glm::normalize(particle.Dir) * gl::delta_time_in_seconds() * speed;
+            float closestT;
+            float closestDist;
+            glm::vec2 closest = find_closest(shape, particle.Pos, closestT, closestDist);
+
+           closestDist = glm::clamp(closestDist, 0.001f, 1.0f);
+
+            float forceStrength = (1.0f - closestDist);
+            forceStrength *= forceStrength;
+
+            glm::vec2 forceCurve = forceStrength * find_normal(shape, closestT) * forceFieldMultiplier;
+
+            particle.Pos += particle.Dir * gl::delta_time_in_seconds();
+            particle.Dir += (glm::vec2(0, -gravity) + forceCurve) * gl::delta_time_in_seconds();
+            
+            utils::draw_line(particle.Pos, closest, 0.005f, glm::vec4(0,0,1,1));
             utils::draw_disk(particle.Pos, 0.01f, particle.Color);
         }
-        
-        glm::vec2 closest = find_closest(bezierCurve, gl::mouse_position());
-        utils::draw_line(closest, gl::mouse_position(), 0.01f, glm::vec4(0,0,1,1));
-        utils::draw_disk(closest, 0.025f, glm::vec4(1,0,0,1));
     }
 }
