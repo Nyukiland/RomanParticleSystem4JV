@@ -55,10 +55,20 @@ glm::vec2 bezier3(const glm::vec2 p0, const glm::vec2 p1, const glm::vec2 p2, co
     return lerp(D, E, t);
 }
 
-float find_closest_t(std::function<glm::vec2(float)> const& parametric, glm::vec2 targetPos, int samples = 500)
+glm::vec2 find_normal(std::function<glm::vec2(float)> const& parametric, float t)
 {
-    float best_t = 0.0f;
+    glm::vec2 pos = parametric(t);
+    glm::vec2 pos2 = parametric(t + 0.02);
+        
+    glm::vec2 tangent = pos2 - pos;
+    
+    return glm::normalize(glm::vec2(-tangent.y, tangent.x));
+}
+
+glm::vec2 find_closest(std::function<glm::vec2(float)> const& parametric, glm::vec2 targetPos, int samples = 500)
+{
     float best_dist2 = 1000000; 
+    glm::vec2 bestPoint = glm::vec2(1000, 1000);
 
     for (int i = 0; i <= samples; ++i)
     {
@@ -69,11 +79,11 @@ float find_closest_t(std::function<glm::vec2(float)> const& parametric, glm::vec
         if (dist2 < best_dist2)
         {
             best_dist2 = dist2;
-            best_t = t;
+            bestPoint = point;
         }
     }
 
-    return best_t;
+    return bestPoint;
 }
 
 int main()
@@ -96,12 +106,9 @@ int main()
         float placement = (float)i/(float)particlesCount;
         
         glm::vec2 pos = bezierCurve(placement);
-        glm::vec2 pos2 = bezierCurve(placement + 0.02);
+        glm::vec2 normal = find_normal(bezierCurve, placement);
         
-        glm::vec2 tangent = pos2 - pos;
-        glm::vec2 normal = glm::normalize(glm::vec2(-tangent.y, tangent.x));
-        
-        particles.push_back({ pos, normal });    
+        particles.push_back({ pos, normal });
     }
     
     float speed = 0.2f;
@@ -119,7 +126,7 @@ int main()
             utils::draw_disk(particle.Pos, 0.01f, particle.Color);
         }
         
-        glm::vec2 closest = bezierCurve(find_closest_t(bezierCurve, gl::mouse_position()));
+        glm::vec2 closest = find_closest(bezierCurve, gl::mouse_position());
         utils::draw_line(closest, gl::mouse_position(), 0.01f, glm::vec4(0,0,1,1));
         utils::draw_disk(closest, 0.025f, glm::vec4(1,0,0,1));
     }
