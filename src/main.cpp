@@ -1,5 +1,6 @@
 #include "opengl-framework/opengl-framework.hpp"
 #include "utils.hpp"
+#include <numbers>
 
 struct Particle
 {
@@ -7,48 +8,39 @@ struct Particle
     glm::vec4 Color = glm::vec4(utils::rand(0, 1), utils::rand(0, 1), utils::rand(0, 1), 1);
 };
 
-bool is_far_enough(const glm::vec2& candidate, const std::vector<Particle>& particles, float minDist)
+void draw_parametric(std::function<glm::vec2(float)> const& parametric)
 {
-    for (const Particle& p : particles)
+    const int segments = 500;
+    glm::vec2 previousPoint = parametric(0.0f);  // Premier point à t = 0
+
+    for (int i = 1; i <= segments; ++i)
     {
-        if (glm::distance(candidate, p.Pos) < minDist)
-            return false;
+        float t = static_cast<float>(i) / segments;
+        glm::vec2 currentPoint = parametric(t);
+
+        utils::draw_line(previousPoint, currentPoint, 0.01f, glm::vec4(1,1,1,1));
+
+        previousPoint = currentPoint;
     }
-    return true;
 }
+
 
 int main()
 {
-    gl::init("Poisson Disk");
+    gl::init("Courbes");
     gl::maximize_window();
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 
-    float minDist = 0.08;
-    int maxAttempts = 5000;
-
-    std::vector<Particle> particles;
-
-    for (int i = 0; i < maxAttempts; ++i)
-    {
-        glm::vec2 candidate;
-        candidate.x = utils::rand(-gl::window_aspect_ratio(), gl::window_aspect_ratio());
-        candidate.y = utils::rand(-1, 1);
-
-        if (is_far_enough(candidate, particles, minDist))
-        {
-            particles.push_back({ candidate });
-        }
-    }
 
     while (gl::window_is_open())
     {
         glClearColor(0.f, 0.f, 0.f, 1.f);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        for (const Particle& particle : particles)
-        {
-            utils::draw_disk(particle.Pos, 0.01f, particle.Color);
-        }
+        draw_parametric([](float t) {
+            float angle = t * 2 * std::numbers::pi;
+            return glm::vec2(std::cos(angle)/2, std::sin(angle)/2);
+        });
     }
 }
