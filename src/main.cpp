@@ -63,12 +63,13 @@ int main()
     glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 
 
-    int particlesCount = 100;
+    int particlesCount = 20;
     std::vector<Particle> particles;
 
     for (int i = 0; i < particlesCount; ++i)
     {
-        particles.push_back({ bezier3({-0.7f, 0}, {0, 0}, {0.5f, 0.5f}, {0.8f, -0.3f}, utils::rand(0,1)) });    
+        float placement = (float)i/(float)particlesCount;
+        particles.push_back({ bezier3({-0.7f, 0}, {0, 0}, {0.5f, 0.5f}, {0.8f, -0.3f}, placement) });    
     }
 
 
@@ -79,7 +80,7 @@ int main()
 
          draw_parametric([](float t) {
             return bezier3({-0.7f, 0}, {0, 0}, {0.5f, 0.5f}, {0.8f, -0.3f}, t);
-        }, glm::vec4(1,0,1,1));
+        }, glm::vec4(1,1,1,1));
 
         for (Particle particle : particles)
         {
