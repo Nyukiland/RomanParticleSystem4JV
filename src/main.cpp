@@ -2,25 +2,19 @@
 #include "utils.hpp"
 #include <numbers>
 
-struct Particle
-{
+struct Particle {
     glm::vec2 Pos = glm::vec2(0, 0);
     glm::vec2 Dir = glm::vec2(0, 0);
     glm::vec4 Color = glm::vec4(utils::rand(0, 1), utils::rand(0, 1), utils::rand(0, 1), 1);
 };
 
-void draw_parametric(std::function<glm::vec2(float)> const& parametric, glm::vec4 color)
-{
+void draw_parametric(std::function<glm::vec2(float)> const& parametric, glm::vec4 color) {
     const int segments = 500;
-    glm::vec2 previousPoint = parametric(0.0f);  // Premier point à t = 0
-
-    for (int i = 1; i <= segments; ++i)
-    {
+    glm::vec2 previousPoint = parametric(0.0f);
+    for (int i = 1; i <= segments; ++i) {
         float t = static_cast<float>(i) / segments;
         glm::vec2 currentPoint = parametric(t);
-
         utils::draw_line(previousPoint, currentPoint, 0.01f, color);
-
         previousPoint = currentPoint;
     }
 }
@@ -29,125 +23,98 @@ glm::vec2 lerp(const glm::vec2 a, const glm::vec2 b, float t) {
     return (1.0f - t) * a + t * b;
 }
 
-glm::vec2 bezier1(const glm::vec2 p0, const glm::vec2 p1, float t)
-{
-    return lerp(p0, p1, t);
-}
-
-glm::vec2 bezier2(const glm::vec2 p0, const glm::vec2 p1, const glm::vec2 p2, float t)
-{
-    glm::vec2 A = lerp(p0, p1, t);
-    glm::vec2 B = lerp(p1, p2, t);
-
-    return lerp(A, B, t);
-}
-
-
-glm::vec2 bezier3(const glm::vec2 p0, const glm::vec2 p1, const glm::vec2 p2, const glm::vec2 p3, float t)
-{
-    glm::vec2 A = lerp(p0, p1, t);
-    glm::vec2 B = lerp(p1, p2, t);
-    glm::vec2 C = lerp(p2, p3, t);
-
-    glm::vec2 D = lerp(A, B, t);
-    glm::vec2 E = lerp(B, C, t);
-
-    return lerp(D, E, t);
-}
-
-glm::vec2 find_normal(std::function<glm::vec2(float)> const& parametric, float t)
-{
+glm::vec2 find_normal(std::function<glm::vec2(float)> const& parametric, float t) {
     glm::vec2 pos = parametric(t);
-    glm::vec2 pos2 = parametric(t + 0.02);
-        
+    glm::vec2 pos2 = parametric(t + 0.01f);
     glm::vec2 tangent = pos2 - pos;
-    
     return glm::normalize(glm::vec2(-tangent.y, tangent.x));
 }
 
-glm::vec2 find_closest(std::function<glm::vec2(float)> const& parametric, glm::vec2 targetPos, float& outT, float& outDist, int samples = 500)
-{
-    outDist = 1000000; 
+glm::vec2 find_closest(std::function<glm::vec2(float)> const& parametric, glm::vec2 targetPos, float& outT, float& outDist, int samples = 500) {
+    outDist = 1000000;
     glm::vec2 bestPoint = glm::vec2(1000, 1000);
-
-    for (int i = 0; i <= samples; ++i)
-    {
+    for (int i = 0; i <= samples; ++i) {
         float t = (float)i / samples;
         glm::vec2 point = parametric(t);
-        float dist2 = glm::length(point - targetPos); 
-
-        if (dist2 < outDist)
-        {
+        float dist2 = glm::length(point - targetPos);
+        if (dist2 < outDist) {
             outDist = dist2;
             bestPoint = point;
             outT = t;
-
         }
     }
-
     return bestPoint;
 }
 
-int main()
-{
+int main() {
     gl::init("Courbes");
     gl::maximize_window();
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 
-    auto shape = [](float t) {
+    const int deformationResolution = 360;
+    std::vector<float> deformation(deformationResolution, 0.0f);
+
+    auto shape = [&](float t) {
         float theta = t * 2.0f * std::numbers::pi;
-        float r = 1.0f - sin(theta);
+        int index = static_cast<int>((theta / (2.0f * std::numbers::pi)) * deformationResolution) % deformationResolution;
+        float deform = deformation[index];
+        float r = 0.5f + deform; // base radius 0.5 plus deformation
         float x = r * cos(theta);
         float y = r * sin(theta);
-        return glm::vec2(x, y) * 0.5f;
+        return glm::vec2(x, y);
     };
+
 
     int particlesCount = 100;
     std::vector<Particle> particles;
-    
-    for (int i = 0; i < particlesCount; ++i)
+    for (int i = 0; i < particlesCount; ++i) 
     {
-        float placement = (float)i/(float)particlesCount;
-        
-        glm::vec2 pos = lerp(glm::vec2(-gl::window_aspect_ratio(), 1), glm::vec2(gl::window_aspect_ratio(), 1), placement);
-        
-        particles.push_back({ pos, glm::vec2(0,-1) });
+        glm::vec2 pos = glm::vec2(utils::rand(-gl::window_aspect_ratio(), gl::window_aspect_ratio()), utils::rand(-1.0f, 1.0f));
+        particles.push_back({ pos, glm::vec2(0, -1) });
     }
-    
+
     float gravity = 0.002f;
     float forceFieldMultiplier = 3.0f;
 
-    while (gl::window_is_open())
-    {
+    while (gl::window_is_open()) {
         glClearColor(0.f, 0.f, 0.f, 1.f);
         glClear(GL_COLOR_BUFFER_BIT);
 
-         draw_parametric(shape, glm::vec4(1,1,1,1));
+        draw_parametric(shape, glm::vec4(1, 1, 1, 1));
 
-        for (Particle& particle : particles)
-        {
+        for (Particle& particle : particles) {
             float closestT;
             float closestDist;
             glm::vec2 closest = find_closest(shape, particle.Pos, closestT, closestDist);
-
-           closestDist = glm::clamp(closestDist, 0.001f, 1.0f);
-
+            closestDist = glm::clamp(closestDist, 0.001f, 1.0f);
             float forceStrength = (1.0f - closestDist);
             forceStrength *= forceStrength;
-
             glm::vec2 forceCurve = forceStrength * find_normal(shape, closestT) * forceFieldMultiplier;
 
             particle.Pos += particle.Dir * gl::delta_time_in_seconds();
-            particle.Dir += (glm::vec2(0, -gravity) + forceCurve) * gl::delta_time_in_seconds();
-            
-            if (particle.Pos.x > gl::window_aspect_ratio() || particle.Pos.x < -gl::window_aspect_ratio() || particle.Pos.y < -1)
-            {
-                particle.Pos = glm::vec2(utils::rand(-gl::window_aspect_ratio(), gl::window_aspect_ratio()), 1);
+            particle.Dir += (glm::vec2(0, -gravity)) * gl::delta_time_in_seconds();
+
+            int deformIndex = static_cast<int>((closestT * deformationResolution)) % deformationResolution;
+            deformation[deformIndex] += 0.002f * forceStrength;
+            int blurRadius = 2;
+            for (int i = -blurRadius; i <= blurRadius; ++i) {
+                int idx = (deformIndex + i + deformationResolution) % deformationResolution;
+                float falloff = 1.0f - std::abs(i) / float(blurRadius + 1);
+                deformation[idx] += 0.001f * forceStrength * falloff;
             }
 
-            utils::draw_line(particle.Pos, closest, 0.005f, glm::vec4(0,0,1,1));
+            if (particle.Pos.x > gl::window_aspect_ratio() || particle.Pos.x < -gl::window_aspect_ratio() || particle.Pos.y < -1) {
+                particle.Pos = glm::vec2(utils::rand(-gl::window_aspect_ratio(), gl::window_aspect_ratio()), 1);
+                particle.Dir = glm::vec2(0, -1);
+            }
+
+            utils::draw_line(particle.Pos, closest, 0.005f, particle.Color);
             utils::draw_disk(particle.Pos, 0.01f, particle.Color);
+        }
+
+        for (float& d : deformation) {
+            d *= 0.98f;
         }
     }
 }
