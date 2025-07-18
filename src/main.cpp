@@ -35,24 +35,23 @@ glm::vec2 bezier1(const glm::vec2 p0, const glm::vec2 p1, float t)
 
 glm::vec2 bezier2(const glm::vec2 p0, const glm::vec2 p1, const glm::vec2 p2, float t)
 {
-    float u = 1.0f - t;
-    float b0 = u * u;
-    float b1 = 2 * u * t;
-    float b2 = t * t;
+    glm::vec2 A = lerp(p0, p1, t);
+    glm::vec2 B = lerp(p1, p2, t);
 
-    return b0 * p0 + b1 * p1 + b2 * p2;
+    return lerp(A, B, t);
 }
 
 
 glm::vec2 bezier3(const glm::vec2 p0, const glm::vec2 p1, const glm::vec2 p2, const glm::vec2 p3, float t)
 {
-    float u = 1.0f - t;
-    float b0 = u * u * u;
-    float b1 = 3 * u * u * t;
-    float b2 = 3 * u * t * t;
-    float b3 = t * t * t;
+    glm::vec2 A = lerp(p0, p1, t);
+    glm::vec2 B = lerp(p1, p2, t);
+    glm::vec2 C = lerp(p2, p3, t);
 
-    return b0 * p0 + b1 * p1 + b2 * p2 + b3 * p3;
+    glm::vec2 D = lerp(A, B, t);
+    glm::vec2 E = lerp(B, C, t);
+
+    return lerp(D, E, t);
 }
 
 
@@ -63,21 +62,28 @@ int main()
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 
+
+    int particlesCount = 100;
+    std::vector<Particle> particles;
+
+    for (int i = 0; i < particlesCount; ++i)
+    {
+        particles.push_back({ bezier3({-0.7f, 0}, {0, 0}, {0.5f, 0.5f}, {0.8f, -0.3f}, utils::rand(0,1)) });    
+    }
+
+
     while (gl::window_is_open())
     {
         glClearColor(0.f, 0.f, 0.f, 1.f);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        draw_parametric([](float t) {
-            return bezier1({-0.5f, -0.5f}, {-0.5f, 0.5f}, t);
-        }, glm::vec4(1,1,1,1));
-
          draw_parametric([](float t) {
-            return bezier2({-0.3f, 0.5f}, gl::mouse_position(), {0.8f, 0.5f}, t);
-        }, glm::vec4(0,1,1,1));
-
-         draw_parametric([](float t) {
-            return bezier3({-0.3f, -0.3f}, {0, 0}, gl::mouse_position(), {0.8f, -0.3f}, t);
+            return bezier3({-0.7f, 0}, {0, 0}, {0.5f, 0.5f}, {0.8f, -0.3f}, t);
         }, glm::vec4(1,0,1,1));
+
+        for (Particle particle : particles)
+        {
+            utils::draw_disk(particle.Pos, 0.01f, particle.Color);
+        }
     }
 }
