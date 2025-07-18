@@ -141,6 +141,11 @@ int main()
             particle.Pos += particle.Dir * gl::delta_time_in_seconds();
             particle.Dir += (glm::vec2(0, -gravity) + forceCurve) * gl::delta_time_in_seconds();
             
+            if (particle.Pos.x > gl::window_aspect_ratio() || particle.Pos.x < -gl::window_aspect_ratio() || particle.Pos.y < -1)
+            {
+                particle.Pos = glm::vec2(utils::rand(-gl::window_aspect_ratio(), gl::window_aspect_ratio()), 1);
+            }
+
             utils::draw_line(particle.Pos, closest, 0.005f, glm::vec4(0,0,1,1));
             utils::draw_disk(particle.Pos, 0.01f, particle.Color);
         }
