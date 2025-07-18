@@ -8,7 +8,7 @@ struct Particle
     glm::vec4 Color = glm::vec4(utils::rand(0, 1), utils::rand(0, 1), utils::rand(0, 1), 1);
 };
 
-void draw_parametric(std::function<glm::vec2(float)> const& parametric)
+void draw_parametric(std::function<glm::vec2(float)> const& parametric, glm::vec4 color)
 {
     const int segments = 500;
     glm::vec2 previousPoint = parametric(0.0f);  // Premier point à t = 0
@@ -18,7 +18,7 @@ void draw_parametric(std::function<glm::vec2(float)> const& parametric)
         float t = static_cast<float>(i) / segments;
         glm::vec2 currentPoint = parametric(t);
 
-        utils::draw_line(previousPoint, currentPoint, 0.01f, glm::vec4(1,1,1,1));
+        utils::draw_line(previousPoint, currentPoint, 0.01f, color);
 
         previousPoint = currentPoint;
     }
@@ -35,23 +35,24 @@ glm::vec2 bezier1(const glm::vec2 p0, const glm::vec2 p1, float t)
 
 glm::vec2 bezier2(const glm::vec2 p0, const glm::vec2 p1, const glm::vec2 p2, float t)
 {
-    glm::vec2 A = lerp(p0, p1, t);
-    glm::vec2 B = lerp(p1, p2, t);
+    float u = 1.0f - t;
+    float b0 = u * u;
+    float b1 = 2 * u * t;
+    float b2 = t * t;
 
-    return lerp(A, B, t);
+    return b0 * p0 + b1 * p1 + b2 * p2;
 }
 
 
 glm::vec2 bezier3(const glm::vec2 p0, const glm::vec2 p1, const glm::vec2 p2, const glm::vec2 p3, float t)
 {
-    glm::vec2 A = lerp(p0, p1, t);
-    glm::vec2 B = lerp(p1, p2, t);
-    glm::vec2 C = lerp(p2, p3, t);
+    float u = 1.0f - t;
+    float b0 = u * u * u;
+    float b1 = 3 * u * u * t;
+    float b2 = 3 * u * t * t;
+    float b3 = t * t * t;
 
-    glm::vec2 D = lerp(A, B, t);
-    glm::vec2 E = lerp(B, C, t);
-
-    return lerp(D, E, t);
+    return b0 * p0 + b1 * p1 + b2 * p2 + b3 * p3;
 }
 
 
@@ -69,14 +70,14 @@ int main()
 
         draw_parametric([](float t) {
             return bezier1({-0.5f, -0.5f}, {-0.5f, 0.5f}, t);
-        });
+        }, glm::vec4(1,1,1,1));
 
          draw_parametric([](float t) {
             return bezier2({-0.3f, 0.5f}, gl::mouse_position(), {0.8f, 0.5f}, t);
-        });
+        }, glm::vec4(0,1,1,1));
 
          draw_parametric([](float t) {
             return bezier3({-0.3f, -0.3f}, {0, 0}, gl::mouse_position(), {0.8f, -0.3f}, t);
-        });
+        }, glm::vec4(1,0,1,1));
     }
 }
