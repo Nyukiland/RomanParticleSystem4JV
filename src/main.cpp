@@ -5,6 +5,7 @@
 struct Particle
 {
     glm::vec2 Pos = glm::vec2(0, 0);
+    glm::vec2 Dir = glm::vec2(0, 0);
     glm::vec4 Color = glm::vec4(utils::rand(0, 1), utils::rand(0, 1), utils::rand(0, 1), 1);
 };
 
@@ -65,13 +66,21 @@ int main()
 
     int particlesCount = 20;
     std::vector<Particle> particles;
-
+    
     for (int i = 0; i < particlesCount; ++i)
     {
         float placement = (float)i/(float)particlesCount;
-        particles.push_back({ bezier3({-0.7f, 0}, {0, 0}, {0.5f, 0.5f}, {0.8f, -0.3f}, placement) });    
+        
+        glm::vec2 pos = bezier3({-0.7f, 0}, {0, 0}, {0.5f, 0.5f}, {0.8f, -0.3f}, placement);
+        glm::vec2 pos2 = bezier3({-0.7f, 0}, {0, 0}, {0.5f, 0.5f}, {0.8f, -0.3f}, placement + 0.02);
+        
+        glm::vec2 tangent = pos2 - pos;
+        glm::vec2 normal = glm::normalize(glm::vec2(-tangent.y, tangent.x));
+        
+        particles.push_back({ pos, normal });    
     }
-
+    
+    float speed = 0.2f;
 
     while (gl::window_is_open())
     {
@@ -82,8 +91,9 @@ int main()
             return bezier3({-0.7f, 0}, {0, 0}, {0.5f, 0.5f}, {0.8f, -0.3f}, t);
         }, glm::vec4(1,1,1,1));
 
-        for (Particle particle : particles)
+        for (Particle& particle : particles)
         {
+            particle.Pos += glm::normalize(particle.Dir) * gl::delta_time_in_seconds() * speed;
             utils::draw_disk(particle.Pos, 0.01f, particle.Color);
         }
     }
