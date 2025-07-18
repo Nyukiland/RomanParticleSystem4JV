@@ -55,6 +55,26 @@ glm::vec2 bezier3(const glm::vec2 p0, const glm::vec2 p1, const glm::vec2 p2, co
     return lerp(D, E, t);
 }
 
+float find_closest_t(std::function<glm::vec2(float)> const& parametric, glm::vec2 targetPos, int samples = 500)
+{
+    float best_t = 0.0f;
+    float best_dist2 = 1000000; 
+
+    for (int i = 0; i <= samples; ++i)
+    {
+        float t = (float)i / samples;
+        glm::vec2 point = parametric(t);
+        float dist2 = glm::length(point - targetPos); 
+
+        if (dist2 < best_dist2)
+        {
+            best_dist2 = dist2;
+            best_t = t;
+        }
+    }
+
+    return best_t;
+}
 
 int main()
 {
@@ -62,6 +82,10 @@ int main()
     gl::maximize_window();
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+
+    auto bezierCurve = [](float t) {
+        return bezier3({-0.7f, 0}, {0, 0}, {0.5f, 0.5f}, {0.8f, -0.3f}, t);
+    };
 
 
     int particlesCount = 20;
@@ -71,8 +95,8 @@ int main()
     {
         float placement = (float)i/(float)particlesCount;
         
-        glm::vec2 pos = bezier3({-0.7f, 0}, {0, 0}, {0.5f, 0.5f}, {0.8f, -0.3f}, placement);
-        glm::vec2 pos2 = bezier3({-0.7f, 0}, {0, 0}, {0.5f, 0.5f}, {0.8f, -0.3f}, placement + 0.02);
+        glm::vec2 pos = bezierCurve(placement);
+        glm::vec2 pos2 = bezierCurve(placement + 0.02);
         
         glm::vec2 tangent = pos2 - pos;
         glm::vec2 normal = glm::normalize(glm::vec2(-tangent.y, tangent.x));
@@ -87,14 +111,16 @@ int main()
         glClearColor(0.f, 0.f, 0.f, 1.f);
         glClear(GL_COLOR_BUFFER_BIT);
 
-         draw_parametric([](float t) {
-            return bezier3({-0.7f, 0}, {0, 0}, {0.5f, 0.5f}, {0.8f, -0.3f}, t);
-        }, glm::vec4(1,1,1,1));
+         draw_parametric(bezierCurve, glm::vec4(1,1,1,1));
 
         for (Particle& particle : particles)
         {
             particle.Pos += glm::normalize(particle.Dir) * gl::delta_time_in_seconds() * speed;
             utils::draw_disk(particle.Pos, 0.01f, particle.Color);
         }
+        
+        glm::vec2 closest = bezierCurve(find_closest_t(bezierCurve, gl::mouse_position()));
+        utils::draw_line(closest, gl::mouse_position(), 0.01f, glm::vec4(0,0,1,1));
+        utils::draw_disk(closest, 0.025f, glm::vec4(1,0,0,1));
     }
 }
